@@ -108,8 +108,6 @@ POC 默认账号如下。部署到公网或多人共享前，请在本机 `.env`
 | `OPENAI_COMPATIBLE_BASE_URL` | AI 功能需要 | DeepSeek 默认 `https://api.deepseek.com/v1`；OpenAI 默认 `https://api.openai.com/v1`；其他供应商看其 OpenAI-compatible 文档。 |
 | `OPENAI_COMPATIBLE_MODEL` | AI 功能需要 | 模型名，例如 `deepseek-v4-pro`、`deepseek-chat` 或供应商文档中可用的模型 ID。 |
 | `OPENAI_COMPATIBLE_PROVIDER` | 否 | 前端展示用供应商标签，例如 `deepseek`、`openai`。 |
-| `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` | 否 | 旧版兼容变量。新配置建议使用 `OPENAI_COMPATIBLE_*`。 |
-| `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL` | 否 | 旧版兼容变量。新配置建议使用 `OPENAI_COMPATIBLE_*`。 |
 | `EIA_API_KEY` | 建议 | EIA 官方申请页：`https://www.eia.gov/opendata/register.php`。`demo` 可用于有限测试，但不适合稳定运行。 |
 | `EIA_BASE_URL` | 否 | 默认 `https://api.eia.gov/v2`。 |
 | `EIA_DIESEL_SERIES` | 否 | 当前柴油序列默认 `EER_EPD2DXL0_PF4_Y35NY_DPG`。更换商品时改为对应 EIA series。 |
