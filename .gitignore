@@ -1,0 +1,68 @@
+# Python bytecode and test caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments and local tool state
+.venv/
+.venv*/
+venv/
+env/
+.superpowers/
+.playwright-cli/
+.playwright-mcp/
+
+# Local backups and historical snapshots
+*backup*/
+*_backup/
+*.bak
+*.old
+*.tmp
+archive/
+archives/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Local databases and runtime state
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite*
+data/temp/
+
+# Logs, generated outputs, and training scratch files
+*.log
+output/
+lightning_logs/
+**/lightning_logs/
+runs/
+wandb/
+
+# Frontend dependencies and build output
+node_modules/
+dist/
+build/
+.vite/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+
+# Keep lightweight model artifacts trackable for this POC.
+!backend/ml/trained_models/
+!backend/ml/trained_models/**
