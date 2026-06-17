@@ -29,11 +29,11 @@ class EIAProvider(DataProvider):
     - WTI crude spot: /petroleum/pri/spt/data/
     """
 
-    # EIA series IDs
+    # EIA 序列 ID
     DIESEL_SERIES = "EER_EPD2DXL0_PF4_Y35NY_DPG"  # New York Harbor ULSD spot
     WTI_CRUDE_SERIES = "RWTC"  # WTI Crude Oil spot
 
-    # Approximate USD→RMB/ton conversion for diesel
+    # 柴油价格从美元/加仑近似换算到人民币/吨
     # 1 gallon ≈ 3.785 liters, diesel density ≈ 0.835 kg/L
     # 1 ton ≈ 1000 / (3.785 * 0.835) gallons ≈ 316.3 gallons
     GALLONS_PER_TON = 316.3
@@ -100,7 +100,7 @@ class EIAProvider(DataProvider):
             for r in records:
                 try:
                     price_usd_gallon = float(r["value"])
-                    # Convert: USD/gallon → RMB/ton
+                    # 换算：美元/加仑 → 人民币/吨
                     price_rmb_ton = price_usd_gallon * self.GALLONS_PER_TON * self.DEFAULT_USD_CNY_RATE
                     rows.append({
                         "date": r["period"],

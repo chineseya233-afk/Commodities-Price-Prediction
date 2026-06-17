@@ -24,7 +24,7 @@ class FeatureEngineer:
     - Static: commodity type, region
     """
 
-    # Chinese public holidays (simplified for POC)
+    # 中国公众假期（POC 简化版）
     CHINESE_HOLIDAYS = {
         (1, 1), (1, 2), (1, 3),           # New Year
         (2, 10), (2, 11), (2, 12), (2, 13), (2, 14), (2, 15), (2, 16), (2, 17),  # Spring Festival (approximate)
@@ -46,29 +46,29 @@ class FeatureEngineer:
         df = df.copy()
         df["date"] = pd.to_datetime(df["date"])
         
-        # Calendar features (known future)
+        # 日历特征（未来已知）
         df = self._add_calendar_features(df)
         
-        # Technical indicators (unknown future)
+        # 技术指标（未来未知）
         df = self._add_technical_indicators(df, target_col)
         
-        # Lag features (unknown future)
+        # 滞后特征（未来未知）
         df = self._add_lag_features(df, target_col)
         
-        # Rolling statistics (unknown future)
+        # 滚动统计（未来未知）
         df = self._add_rolling_stats(df, target_col)
         
-        # Price change features
+        # 价格变化特征
         df = self._add_price_change_features(df, target_col)
         
-        # NDRC adjustment window indicator
+        # 发改委调价窗口指标
         df = self._add_ndrc_window(df)
         
-        # Fill NaN in feature columns instead of dropping rows
+        # 填充特征列中的 NaN，而不是直接删除行
         initial_len = len(df)
         feature_cols = [c for c in df.columns if c not in ["date", "commodity", "source"]]
         df[feature_cols] = df[feature_cols].ffill().bfill()
-        # Only drop rows where the target itself is still NaN
+        # 只删除目标值本身仍为 NaN 的行
         remaining_na = df.isnull().any(axis=1).sum()
         if remaining_na > 0:
             df = df.dropna().reset_index(drop=True)
@@ -90,12 +90,12 @@ class FeatureEngineer:
             df["is_month_start"] = (df["date"].dt.day == 1).astype(int)
             df["is_month_end"] = ((df["date"] + pd.Timedelta(days=1)).dt.day == 1).astype(int)
         
-        # Holiday indicator
+        # 节假日指标
         df["is_holiday"] = df["date"].apply(
             lambda x: 1 if (x.month, x.day) in self.CHINESE_HOLIDAYS else 0
         )
         
-        # Day before/after holiday (market reaction)
+        # 节假日前后日期（市场反应）
         df["is_near_holiday"] = (
             df["is_holiday"].shift(1).fillna(0).astype(int) | 
             df["is_holiday"].shift(-1).fillna(0).astype(int)
@@ -107,13 +107,13 @@ class FeatureEngineer:
         """Add technical analysis indicators."""
         prices = df[target_col]
         
-        # Moving averages
+        # 移动均线
         for window in self.ma_windows:
             df[f"ma_{window}"] = prices.rolling(window=window).mean()
-            # Price relative to MA
+            # 价格相对均线位置
             df[f"price_vs_ma_{window}"] = (prices - df[f"ma_{window}"]) / df[f"ma_{window}"]
         
-        # RSI (Relative Strength Index)
+        # RSI（相对强弱指数）
         delta = prices.diff()
         gain = delta.where(delta > 0, 0.0)
         loss = (-delta).where(delta < 0, 0.0)
@@ -122,7 +122,7 @@ class FeatureEngineer:
         rs = avg_gain / avg_loss.replace(0, np.nan)
         df["rsi"] = 100 - (100 / (1 + rs))
         
-        # Bollinger Bands (20-day)
+        # 布林带（20 日）
         bb_window = 20
         df["bb_middle"] = prices.rolling(bb_window).mean()
         bb_std = prices.rolling(bb_window).std()
@@ -131,7 +131,7 @@ class FeatureEngineer:
         df["bb_width"] = (df["bb_upper"] - df["bb_lower"]) / df["bb_middle"]
         df["bb_position"] = (prices - df["bb_lower"]) / (df["bb_upper"] - df["bb_lower"])
         
-        # Volatility (20-day rolling std of returns)
+        # 波动率（收益率 20 日滚动标准差）
         returns = prices.pct_change()
         df["volatility_20d"] = returns.rolling(20).std()
         
@@ -162,7 +162,7 @@ class FeatureEngineer:
         df["price_change_20d"] = df[target_col].diff(20)
         df["price_change_pct_20d"] = df[target_col].pct_change(20) * 100
         
-        # Momentum: current price vs N-day ago
+        # 动量：当前价格相对 N 天前
         df["momentum_5d"] = df[target_col] / df[target_col].shift(5)
         df["momentum_10d"] = df[target_col] / df[target_col].shift(10)
         
@@ -170,11 +170,11 @@ class FeatureEngineer:
 
     def _add_ndrc_window(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add NDRC adjustment window indicator (10 working day cycle)."""
-        # Working day count from start
+        # 从起点开始累计的工作日数
         df["working_day_idx"] = range(len(df))
-        # Position within NDRC 10-day cycle
+        # 发改委 10 工作日周期内的位置
         df["ndrc_cycle_position"] = df["working_day_idx"] % 10
-        # Near adjustment window (last 2 days of cycle)
+        # 接近调价窗口（周期最后 2 天）
         df["is_near_adjustment"] = (df["ndrc_cycle_position"] >= 8).astype(int)
         return df
 

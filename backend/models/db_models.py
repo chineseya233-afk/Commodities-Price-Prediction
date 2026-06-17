@@ -96,7 +96,7 @@ class ModelMetrics(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
-# Database engine and session setup
+# 数据库引擎和会话设置
 def get_engine(database_url: str = "sqlite:///./data/commodity_prediction.db"):
     """Create database engine."""
     return create_engine(database_url, echo=False)

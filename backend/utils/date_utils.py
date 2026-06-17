@@ -35,9 +35,9 @@ def build_visible_forecast_targets(
     ]
     if visible:
         return visible
-    # If a real market feed lags beyond the forecast horizon, still expose the
-    # forecast window anchored to the latest available data instead of returning
-    # no predictions and forcing the UI to display zero-valued summaries.
+    # 如果真实市场数据源滞后时间超过预测窗口，仍然展示
+    # 锚定到最新可用数据的预测窗口，而不是返回
+    # 空预测并迫使前端显示零值摘要。
     return list(enumerate(forecast_dates))
 
 

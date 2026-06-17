@@ -31,16 +31,16 @@ class DataPreprocessor:
         """Run full preprocessing pipeline."""
         logger.info(f"Starting preprocessing pipeline. Shape: {df.shape}")
         
-        # Step 1: Sort by date
+        # 第 1 步：按日期排序
         df = df.sort_values("date").reset_index(drop=True)
         
-        # Step 2: Handle missing values
+        # 第 2 步：处理缺失值
         df = self._handle_missing_values(df, target_col)
         
-        # Step 3: Detect and flag outliers
+        # 第 3 步：检测并标记异常值
         df = self._detect_outliers(df, target_col)
         
-        # Step 4: Generate quality report
+        # 第 4 步：生成质量报告
         self._generate_quality_report(df, target_col)
         
         logger.info(f"Preprocessing complete. Final shape: {df.shape}")
@@ -50,16 +50,16 @@ class DataPreprocessor:
         """Forward fill then linear interpolation for remaining gaps."""
         numeric_cols = df.select_dtypes(include=[np.number]).columns
         
-        # Count missing before
+        # 统计处理前缺失值
         missing_before = df[numeric_cols].isnull().sum().sum()
         
-        # Forward fill first (most recent known value)
+        # 先向前填充（使用最近已知值）
         df[numeric_cols] = df[numeric_cols].ffill()
         
-        # Linear interpolation for remaining gaps (start of series)
+        # 对剩余缺口做线性插值（序列起始处）
         df[numeric_cols] = df[numeric_cols].interpolate(method="linear")
         
-        # Backward fill for any remaining edge cases
+        # 对剩余边界情况做向后填充
         df[numeric_cols] = df[numeric_cols].bfill()
         
         missing_after = df[numeric_cols].isnull().sum().sum()
@@ -74,7 +74,7 @@ class DataPreprocessor:
             
         values = df[target_col].values
         
-        # IQR method
+        # IQR 方法
         q1 = np.percentile(values, 25)
         q3 = np.percentile(values, 75)
         iqr = q3 - q1
@@ -82,7 +82,7 @@ class DataPreprocessor:
         upper_bound = q3 + self.iqr_multiplier * iqr
         iqr_outliers = (values < lower_bound) | (values > upper_bound)
         
-        # Z-Score method
+        # Z-Score 方法
         mean = np.mean(values)
         std = np.std(values)
         if std > 0:
@@ -91,7 +91,7 @@ class DataPreprocessor:
         else:
             zscore_outliers = np.zeros(len(values), dtype=bool)
         
-        # Combine: flag if either method detects
+        # 合并结果：任一方法检测到即标记
         df["is_outlier"] = iqr_outliers | zscore_outliers
         
         outlier_count = df["is_outlier"].sum()

@@ -19,11 +19,11 @@ from loguru import logger
 
 warnings.filterwarnings("ignore")
 
-# Attempt to import PyTorch Forecasting — graceful fallback if unavailable
+# 尝试导入 PyTorch Forecasting；不可用时优雅回退
 TFT_AVAILABLE = False
 try:
     import torch
-    # Use lightning.pytorch (unified package) — must match pytorch-forecasting's import
+    # 使用 lightning.pytorch（统一包），需要与 pytorch-forecasting 的导入方式匹配
     import lightning.pytorch as pl
     from pytorch_forecasting import (
         TemporalFusionTransformer,
@@ -35,7 +35,7 @@ try:
     TFT_AVAILABLE = True
 except ImportError:
     try:
-        # Fallback to pytorch_lightning if lightning not available
+        # 如果 lightning 不可用，则回退到 pytorch_lightning
         import torch
         import pytorch_lightning as pl
         from pytorch_forecasting import (
@@ -111,13 +111,13 @@ class TFTModel:
         df["date"] = pd.to_datetime(df["date"])
         df = df.sort_values("date").reset_index(drop=True)
         
-        # Create time index (integer sequential)
+        # 创建时间索引（连续整数）
         df["time_idx"] = range(len(df))
         
-        # Group ID (single series for POC)
+        # 分组 ID（POC 中为单序列）
         df["group_id"] = "diesel_0"
         
-        # Default feature columns if not specified
+        # 未指定时使用默认特征列
         if known_future_cols is None:
             known_future_cols = [
                 "day_of_week", "month", "quarter", "is_holiday",
@@ -130,24 +130,24 @@ class TFTModel:
                 "volatility_20d", "momentum_5d",
             ]
         
-        # Filter to only columns that exist
+        # 只保留实际存在的列
         known_future_cols = [c for c in known_future_cols if c in df.columns]
         unknown_future_cols = [c for c in unknown_future_cols if c in df.columns]
         
-        # Ensure all numeric, fill any remaining NaN
+        # 确保全部为数值，并填充剩余 NaN
         for col in known_future_cols + unknown_future_cols + [target_col]:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
         df = df.ffill().bfill().fillna(0)
 
-        # Train/val split (last prediction_horizon * 3 days for validation)
+        # 训练/验证切分（最后 prediction_horizon * 3 天用于验证）
         val_size = self.prediction_horizon * 3
         training_cutoff = df["time_idx"].max() - val_size
 
-        # Save the input column list BEFORE TimeSeriesDataSet adds protected columns
+        # 在 TimeSeriesDataSet 添加保护列之前保存输入列列表
         self._input_columns = list(df.columns)
 
-        # Create training dataset
+        # 创建训练数据集
         try:
             self.training_dataset = TimeSeriesDataSet(
                 df[df.time_idx <= training_cutoff],
@@ -166,7 +166,7 @@ class TFTModel:
                 add_encoder_length=True,
             )
 
-            # Create validation dataset from training parameters
+            # 根据训练参数创建验证数据集
             validation_dataset = TimeSeriesDataSet.from_dataset(
                 self.training_dataset,
                 df,
@@ -174,7 +174,7 @@ class TFTModel:
                 stop_randomization=True,
             )
 
-            # Create dataloaders
+            # 创建数据加载器
             batch_size = 32
             train_dataloader = self.training_dataset.to_dataloader(
                 train=True, batch_size=batch_size, num_workers=0
@@ -209,7 +209,7 @@ class TFTModel:
         if training_dataset is None:
             training_dataset = self.training_dataset
 
-        # Initialize model
+        # 初始化模型
         self.model = TemporalFusionTransformer.from_dataset(
             training_dataset,
             learning_rate=self.learning_rate,
@@ -225,7 +225,7 @@ class TFTModel:
 
         logger.info(f"TFT model initialized. Parameters: {self.model.size() / 1e3:.1f}K")
 
-        # Callbacks
+        # 回调
         early_stop = EarlyStopping(
             monitor="val_loss",
             min_delta=1e-4,
@@ -235,7 +235,7 @@ class TFTModel:
         )
         lr_logger = LearningRateMonitor()
 
-        # Trainer
+        # 训练器
         trainer = pl.Trainer(
             max_epochs=self.max_epochs,
             accelerator="auto",  # auto-detect GPU
@@ -247,7 +247,7 @@ class TFTModel:
             default_root_dir="data/temp/lightning_logs",
         )
 
-        # Train
+        # 训练
         logger.info("Starting TFT training...")
         trainer.fit(
             self.model,
@@ -257,7 +257,7 @@ class TFTModel:
         
         self.is_trained = True
         
-        # Get best model path
+        # 获取最佳模型路径
         best_model_path = trainer.checkpoint_callback.best_model_path if trainer.checkpoint_callback else None
         
         return {
@@ -289,20 +289,20 @@ class TFTModel:
             # --- Step 1: Build the correct prediction dataloader ---
             if dataloader is None:
                 if data is not None and self.training_dataset is not None:
-                    # Create a prediction dataset aligned to the latest data
+                    # 创建与最新数据对齐的预测数据集
                     df = data.copy()
                     if "time_idx" not in df.columns:
                         df["time_idx"] = range(len(df))
                     if "group_id" not in df.columns:
                         df["group_id"] = "diesel_0"
 
-                    # Use saved input columns to filter — only keep columns that
-                    # were present in the original training input, ensuring NO
-                    # auto-generated protected columns (relative_time_idx,
-                    # price_center, encoder_length, etc.) leak through.
+                    # 使用已保存输入列进行过滤，只保留
+                    # 原始训练输入中存在的列，确保不会让
+                    # 自动生成的保护列（relative_time_idx、
+                    # price_center、encoder_length 等）泄漏进去。
                     if self._input_columns is not None:
                         keep_cols = [c for c in self._input_columns if c in df.columns]
-                        # Add any missing expected columns with default values
+                        # 对缺失的预期列补默认值
                         for c in self._input_columns:
                             if c not in df.columns:
                                 df[c] = 0.0
@@ -317,7 +317,7 @@ class TFTModel:
                         train=False, batch_size=64, num_workers=0,
                     )
                 elif self.training_dataset is not None:
-                    # No explicit data — use training dataset as last resort
+                    # 没有显式数据时，最后回退使用训练数据集
                     dataloader = self.training_dataset.to_dataloader(
                         train=False, batch_size=64, num_workers=0,
                     )
@@ -325,9 +325,9 @@ class TFTModel:
                     return self._fallback_predict(data)
 
             # --- Step 2: Run model inference ---
-            # Force CPU inference in the serving path. Lightning auto-selects CUDA
-            # when available, and the Windows CUDA stack can terminate the process
-            # before Python exception handling can fall back safely.
+            # 服务路径强制使用 CPU 推理。Lightning 会自动选择 CUDA，
+            # 在可用时 Windows CUDA 栈可能直接终止进程，
+            # 导致 Python 异常处理来不及安全回退。
             self.model.cpu()
             self.model.eval()
             raw_predictions = self.model.predict(
@@ -343,26 +343,26 @@ class TFTModel:
                 },
             )
 
-            # raw_predictions is (output, x) tuple
+            # raw_predictions 是 (output, x) 元组
             predictions = raw_predictions[0]  # shape: (N_samples, horizon, N_quantiles)
 
             # --- Step 3: Extract the LAST sample's predictions (most recent forecast) ---
-            # The last sample in the dataset corresponds to the most recent time window
+            # 数据集最后一个样本对应最近的时间窗口
             last_pred = predictions[-1]  # shape: (horizon, N_quantiles)
 
-            # Quantile indices: [0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
-            #                    idx 0   1     2     3     4     5    6
+            # 分位数索引：[0.02, 0.1, 0.25, 0.5, 0.75, 0.9, 0.98]
+            #                    下标 0   1     2     3     4     5    6
             p10_raw = last_pred[:, 1].detach().cpu().numpy().tolist()
             p50_raw = last_pred[:, 3].detach().cpu().numpy().tolist()
             p90_raw = last_pred[:, 5].detach().cpu().numpy().tolist()
 
-            # Ensure we have exactly prediction_horizon values
+            # 确保正好有 prediction_horizon 个值
             p10_raw = p10_raw[:self.prediction_horizon]
             p50_raw = p50_raw[:self.prediction_horizon]
             p90_raw = p90_raw[:self.prediction_horizon]
 
             # --- Step 4: Per-value sanitization (NOT all-or-nothing) ---
-            # Get a reference price for replacing truly bad values
+            # 获取参考价格，用于替换明显异常值
             ref_price = None
             if data is not None and "price" in data.columns:
                 ref_price = float(data["price"].iloc[-1])
@@ -381,15 +381,15 @@ class TFTModel:
                 logger.warning(f"TFT prediction: sanitized {bad_count} out-of-range values (ref={ref_price:.0f})")
 
             # --- Step 5: Prediction calibration (anchor to last known price) ---
-            # TFT often predicts correct SHAPE but offset LEVEL.
-            # Shift all predictions so p50[0] aligns with the last known price.
+            # TFT 经常能预测正确形状，但价格水平存在偏移。
+            # 平移全部预测，使 p50[0] 与最后已知价格对齐。
             if ref_price and len(p50_raw) > 0:
                 offset = ref_price - p50_raw[0]
-                # Only calibrate if offset is significant (>0.5% of price)
+                # 只有偏移显著时才校准（超过价格的 0.5%）
                 if abs(offset / ref_price) > 0.005:
                     logger.info(f"TFT calibration: shifting predictions by {offset:.0f} "
                                 f"(from {p50_raw[0]:.0f} to {ref_price:.0f})")
-                    # Apply decaying calibration: full shift at day 1, fading to 30% at day 30
+                    # 应用衰减校准：第 1 天完整平移，第 30 天衰减到 30%
                     for i in range(len(p50_raw)):
                         decay = 1.0 - 0.7 * (i / max(len(p50_raw) - 1, 1))
                         adj = offset * decay
@@ -397,14 +397,14 @@ class TFTModel:
                         p10_raw[i] = round(p10_raw[i] + adj, 2)
                         p90_raw[i] = round(p90_raw[i] + adj, 2)
 
-            # Re-ensure monotonicity after calibration
+            # 校准后重新确保单调关系
             for i in range(len(p50_raw)):
                 if p10_raw[i] > p50_raw[i]:
                     p10_raw[i] = p50_raw[i] * 0.995
                 if p90_raw[i] < p50_raw[i]:
                     p90_raw[i] = p50_raw[i] * 1.005
 
-            # Round
+            # 四舍五入
             p10_raw = [round(v, 2) for v in p10_raw]
             p50_raw = [round(v, 2) for v in p50_raw]
             p90_raw = [round(v, 2) for v in p90_raw]
@@ -434,17 +434,17 @@ class TFTModel:
             hist_mean = float(np.mean(prices))
             hist_std = float(np.std(prices))
 
-            # Extract multiple time-scale patterns from historical data
+            # 从历史数据提取多时间尺度模式
             recent_60 = prices[-60:] if len(prices) >= 60 else prices
             returns = np.diff(recent_60) / recent_60[:-1] if len(recent_60) > 1 else np.array([0])
             daily_vol = float(np.std(returns)) if len(returns) > 1 else 0.005
 
-            # Trend components at different scales
+            # 不同尺度的趋势分量
             trend_3d = float(np.mean(returns[-3:])) if len(returns) >= 3 else 0
             trend_7d = float(np.mean(returns[-7:])) if len(returns) >= 7 else 0
             long_trend = float(np.mean(returns[-20:])) if len(returns) >= 20 else 0
 
-            # Extract weekly cycle strength from data
+            # 从数据提取周周期强度
             if len(prices) >= 20:
                 weekly_cycle = []
                 for d in range(5):
@@ -453,22 +453,22 @@ class TFTModel:
             else:
                 weekly_cycle = [0.001, -0.0005, 0.0008, -0.001, 0.0003]
 
-            # Multi-scale autoregressive simulation
+            # 多尺度自回归模拟
             rng = np.random.RandomState(int(last_price * 100) % 2**31)
             predictions = []
             prev = last_price
 
             for i in range(self.prediction_horizon):
-                # Short-term momentum (decays over ~10 days)
+                # 短期动量（约 10 天内衰减）
                 short_mom = trend_3d * (0.85 ** i)
-                # Medium-term trend (blends 7d and 20d trends, decays over time)
+                # 中期趋势（融合 7 日和 20 日趋势，并随时间衰减）
                 med_trend = (trend_7d * 0.6 + long_trend * 0.4) * (0.95 ** (i / 3))
-                # Long-term mean reversion (strengthens over time)
+                # 长期均值回归（随时间增强）
                 mr_strength = 0.005 + i * 0.001
                 mr = mr_strength * (hist_mean - prev) / max(hist_std, 1)
-                # Weekly seasonality
+                # 周季节性
                 dow_effect = weekly_cycle[i % 5] * 0.5
-                # Stochastic noise (larger for longer horizons)
+                # 随机噪声（预测期越长越大）
                 noise_scale = daily_vol * (0.6 + i * 0.03)
                 noise = rng.normal(0, noise_scale)
 
@@ -529,7 +529,7 @@ class TFTModel:
         os.makedirs(os.path.dirname(path) if os.path.dirname(path) else ".", exist_ok=True)
         if self.model is not None and self.is_trained and TFT_AVAILABLE:
             torch.save(self.model.state_dict(), path)
-            # Save config
+            # 保存配置
             config_path = path.replace(".pt", "_config.pkl")
             config = {
                 "prediction_horizon": self.prediction_horizon,
@@ -541,7 +541,7 @@ class TFTModel:
             }
             with open(config_path, "wb") as f:
                 pickle.dump(config, f)
-            # Save training dataset for architecture reconstruction on load
+            # 保存训练数据集，用于加载时重建模型结构
             if self.training_dataset is not None:
                 dataset_path = path.replace(".pt", "_dataset.pkl")
                 with open(dataset_path, "wb") as f:
@@ -556,7 +556,7 @@ class TFTModel:
             logger.warning(f"Model file not found or TFT unavailable: {path}")
             return
 
-        # Load config
+        # 加载配置
         config_path = path.replace(".pt", "_config.pkl")
         if os.path.exists(config_path):
             with open(config_path, "rb") as f:
@@ -564,13 +564,13 @@ class TFTModel:
             for k, v in config.items():
                 setattr(self, k, v)
 
-        # Load training dataset (needed to reconstruct model architecture)
+        # 加载训练数据集（重建模型结构所需）
         dataset_path = path.replace(".pt", "_dataset.pkl")
         if os.path.exists(dataset_path):
             with open(dataset_path, "rb") as f:
                 self.training_dataset = pickle.load(f)
 
-            # Reconstruct model architecture from dataset, then load weights
+            # 根据数据集重建模型结构，然后加载权重
             self.model = TemporalFusionTransformer.from_dataset(
                 self.training_dataset,
                 learning_rate=self.learning_rate,

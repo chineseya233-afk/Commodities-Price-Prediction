@@ -1,4 +1,4 @@
-# Python bytecode and test caches
+# Python 字节码和测试缓存
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,7 +8,7 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Virtual environments and local tool state
+# 虚拟环境和本地工具状态
 .venv/
 .venv*/
 venv/
@@ -17,7 +17,7 @@ env/
 .playwright-cli/
 .playwright-mcp/
 
-# Local backups and historical snapshots
+# 本地备份和历史快照
 *backup*/
 *_backup/
 *.bak
@@ -26,17 +26,16 @@ env/
 archive/
 archives/
 
-# Secrets and local environment
-# The tracked .env is a public setup template. Keep real private values in
-# local-only files such as .env.local or .env.private, or mark local .env
-# changes as skip-worktree.
+# 密钥和本地环境配置
+# 仓库跟踪的 .env 是公开配置模板。真实私有值请放在 .env.local、
+# .env.private 等仅本地使用的文件中，或对本机 .env 改动设置 skip-worktree。
 .env.*
 !.env
 *.pem
 *.key
 *.crt
 
-# Local databases and runtime state
+# 本地数据库和运行状态
 *.db
 *.sqlite
 *.sqlite3
@@ -44,7 +43,7 @@ data/*.db
 data/*.sqlite*
 data/temp/
 
-# Logs, generated outputs, and training scratch files
+# 日志、生成输出和训练临时文件
 *.log
 output/
 lightning_logs/
@@ -52,19 +51,19 @@ lightning_logs/
 runs/
 wandb/
 
-# Frontend dependencies and build output
+# 前端依赖和构建产物
 node_modules/
 dist/
 build/
 .vite/
 
-# OS/editor files
+# 操作系统和编辑器文件
 .DS_Store
 Thumbs.db
 desktop.ini
 .idea/
 .vscode/
 
-# Keep lightweight model artifacts trackable for this POC.
+# 保留本 POC 所需的轻量模型产物。
 !backend/ml/trained_models/
 !backend/ml/trained_models/**

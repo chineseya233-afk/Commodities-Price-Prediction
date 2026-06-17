@@ -417,7 +417,7 @@ def calibrate_forecast_volatility(
     template_changes = template_changes / template_std * target_step_std
     offsets = np.concatenate([[0.0], np.cumsum(template_changes)])
 
-    # Remove net drift so the selected model still controls the forecast trend.
+    # 移除净漂移，确保所选模型仍控制预测趋势。
     offsets = offsets - np.linspace(offsets[0], offsets[-1], horizon)
     calibrated_mid = mid + offsets
     shift = calibrated_mid - mid

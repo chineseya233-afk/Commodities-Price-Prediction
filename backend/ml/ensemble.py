@@ -53,7 +53,7 @@ def _best_coverage_model(candidates: Dict, target_coverage: float = 80.0) -> str
         width = _finite_metric(metric, "mean_interval_width_pct")
         mape = _finite_metric(metric, "mape", 999999.0) or 999999.0
         if coverage >= target_coverage:
-            # Once coverage is adequate, narrower intervals are more useful.
+            # 覆盖率达标后，更窄的区间更有采购参考价值。
             width_score = width if width is not None else abs(coverage - target_coverage)
             score = (0, width_score, abs(coverage - target_coverage), mape)
         else:

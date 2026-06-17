@@ -569,7 +569,7 @@ ForecastEvidenceBundle:
                 {"level": "低", "title": "柴油季节性需求支撑", "impact": "区域需求可能限制短期下行空间。"},
             ]
 
-        # Mock 3D risk report
+        # 模拟三维风险报告
         return {
             "report_date": str(date.today()),
             "dimension_1_market": market_risks,
@@ -608,16 +608,16 @@ Return only JSON:
         """Parse LLM response, handling truncated/malformed JSON from various LLMs."""
         import re
 
-        # Clean up common artifacts
+        # 清理常见生成残留
         cleaned = raw.strip().strip("\ufeff")  # BOM
 
-        # Attempt 1: Direct parse
+        # 尝试 1：直接解析
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
             pass
 
-        # Attempt 2: Extract from markdown code block
+        # 尝试 2：从 Markdown 代码块提取
         for pattern in [r"```json\s*([\s\S]*?)```", r"```\s*([\s\S]*?)```"]:
             m = re.search(pattern, cleaned)
             if m:
@@ -626,16 +626,16 @@ Return only JSON:
                 except json.JSONDecodeError:
                     pass
 
-        # Attempt 3: Find outermost JSON object
+        # 尝试 3：查找最外层 JSON 对象
         start = cleaned.find("{")
         if start >= 0:
             json_str = cleaned[start:]
-            # Try direct parse
+            # 尝试直接解析
             try:
                 return json.loads(json_str)
             except json.JSONDecodeError:
                 pass
-            # Try repairing truncated JSON (add missing closing braces/brackets)
+            # 尝试修复截断 JSON（补齐缺失的右花括号/方括号）
             for repair in ["}", "}}", "\"}", "\"}}", "\"]}", "\"]}}",
                            "\"]}}", "\"}]}", "\"]}}}",  "\"\n}"]:
                 try:
@@ -643,7 +643,7 @@ Return only JSON:
                 except json.JSONDecodeError:
                     continue
 
-        # Attempt 4: Regex extraction of individual fields from the raw text
+        # 尝试 4：用正则从原始文本提取单个字段
         result = {}
         for field, pattern in [
             ("summary", r'"summary"\s*:\s*"([^"]{5,200})"'),
@@ -654,13 +654,13 @@ Return only JSON:
             if m:
                 result[field] = m.group(1).replace('\\"', '"').replace("\\n", "\n")
 
-        # Extract risk_factors array
+        # 提取 risk_factors 数组
         m = re.search(r'"risk_factors"\s*:\s*\[(.*?)\]', cleaned, re.DOTALL)
         if m:
             factors = re.findall(r'"([^"]{5,})"', m.group(1))
             result["risk_factors"] = factors
 
-        # Extract procurement_advice object
+        # 提取 procurement_advice 对象
         m = re.search(r'"action"\s*:\s*"([^"]*)"', cleaned)
         if m:
             advice = {"action": m.group(1)}
@@ -678,7 +678,7 @@ Return only JSON:
             result.setdefault("data_quality_notes", "")
             return result
 
-        # Final fallback 鈥?if readable text contains JSON field names, use mock report instead
+        # 最终回退：如果可读文本包含 JSON 字段名，则改用模拟报告
         logger.warning("Failed to parse LLM JSON response. Using mock report fallback.")
         return None  # Signal caller to use mock report
 

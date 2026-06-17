@@ -28,7 +28,7 @@ class FREDProvider(DataProvider):
     Provides macro indicators as additional features for the prediction models.
     """
 
-    # FRED series IDs relevant to diesel pricing
+    # 与柴油价格相关的 FRED 序列 ID
     SERIES = {
         "DEXCHUS": "USD/CNY Exchange Rate",
         "DCOILBRENTEU": "Brent Crude Oil (USD/barrel)",
@@ -122,7 +122,7 @@ class FREDProvider(DataProvider):
 
         if result_df is not None:
             result_df = result_df.sort_values("date").reset_index(drop=True)
-            # Forward-fill gaps (weekends, holidays)
+            # 向前填充周末、节假日等缺口
             result_df = result_df.ffill().bfill()
             return result_df
 

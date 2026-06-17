@@ -35,10 +35,10 @@
 
 ### 安装依赖
 
-在项目根目录执行：
+先进入你解压或 `git clone` 得到的项目根目录，也就是包含 `README.md`、`backend/`、`frontend/` 的文件夹。下面的 `<你的项目根目录>` 请按你自己的电脑路径替换：
 
 ```powershell
-cd "D:\AI Folder\Commodities Price Prediction"
+cd "<你的项目根目录>"
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
 ```
@@ -57,7 +57,7 @@ python -m venv .venv
 ### 启动服务
 
 ```powershell
-cd "D:\AI Folder\Commodities Price Prediction"
+cd "<你的项目根目录>"
 .\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
@@ -67,7 +67,7 @@ cd "D:\AI Folder\Commodities Price Prediction"
 http://127.0.0.1:8000
 ```
 
-前端是 Vue 3 CDN 版本，不需要单独启动 npm 或 Vite 服务。FastAPI 会直接托管 `frontend/index.html` 和 `frontend/src` 下的脚本、样式文件。
+前端是 Vue 3 CDN 版本，不需要单独启动 npm 或 Vite 服务，也不需要打开 3000 端口。FastAPI 会在 8000 端口直接托管 `frontend/index.html` 和 `frontend/src` 下的脚本、样式文件。
 
 ### 停止服务
 
@@ -120,8 +120,7 @@ POC 默认账号如下。部署到公网或多人共享前，请在本机 `.env`
 | `DATA_REFRESH_SECONDS` | 否 | 后台刷新数据源的周期秒数，默认 300。 |
 | `MARKET_DATA_START_DATE` | 否 | 真实数据拉取起点，默认 `2006-06-01`。 |
 | `TEMP_DIR` | 否 | 临时目录，默认 `data/temp`。 |
-| `BACKEND_PORT` | 否 | 后端端口配置，默认 8000。 |
-| `FRONTEND_PORT` | 否 | 前端端口占位配置，当前 CDN 前端通常不单独使用。 |
+| `BACKEND_PORT` | 否 | 后端端口配置，默认 8000；当前前端也由 FastAPI 在该端口托管。 |
 
 ## AI API 配置
 

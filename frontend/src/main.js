@@ -906,7 +906,7 @@ createApp({
         }
         await startAuthenticatedSession(payload);
       } catch {
-        // Stay on the login screen when there is no valid session cookie.
+        // 没有有效会话 cookie 时停留在登录页。
         if (!showPageAwayLoginIfNeeded()) state.authStage = "login";
       } finally {
         if (!isAuthed.value && state.authStage !== "app") state.authStage = "login";
@@ -934,7 +934,7 @@ createApp({
           headers: { "Content-Type": "application/json" },
         });
       } catch {
-        // Local state is already cleared; network failure should not keep the UI logged in.
+        // 本地状态已经清空；网络失败不应让界面保持登录。
       }
     }
 

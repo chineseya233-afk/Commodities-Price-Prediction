@@ -21,7 +21,7 @@ class QAEngine:
     logically consistent and within acceptable bounds.
     """
 
-    # Hard thresholds for Layer 1 rule engine
+    # 第 1 层规则引擎的硬阈值
     MAX_DAILY_CHANGE_PCT = 5.0      # 卤5% daily change cap
     MAX_7D_CUMULATIVE_PCT = 15.0    # 卤15% 7-day cumulative change cap
     HISTORICAL_SIGMA_MULTIPLIER = 2.5  # 卤2.5蟽 from historical mean (lenient for POC simulated data)
@@ -66,35 +66,35 @@ class QAEngine:
 
         # ====== LAYER 1: Hard Rule Engine ======
         
-        # Check 1: Negative or zero values
+        # 检查 1：负数或零值
         check_1 = self._check_positive_values(p50, p10, p90)
         results["layer1_checks"].append(check_1)
         
-        # Check 2: Absolute price bounds
+        # 检查 2：绝对价格边界
         check_2 = self._check_price_bounds(p50)
         results["layer1_checks"].append(check_2)
         
-        # Check 3: Daily change percentage
+        # 检查 3：单日涨跌幅
         check_3 = self._check_daily_change(p50, historical_prices)
         results["layer1_checks"].append(check_3)
         
-        # Check 4: 7-day cumulative change
+        # 检查 4：7 日累计变化
         check_4 = self._check_cumulative_change(p50, historical_prices)
         results["layer1_checks"].append(check_4)
         
-        # Check 5: Historical sigma bounds
+        # 检查 5：历史 sigma 边界
         check_5 = self._check_sigma_bounds(p50, historical_prices)
         results["layer1_checks"].append(check_5)
         
-        # Check 6: Prediction interval sanity (P10 < P50 < P90)
+        # 检查 6：预测区间合理性（P10 < P50 < P90）
         check_6 = self._check_interval_ordering(p10, p50, p90)
         results["layer1_checks"].append(check_6)
         
-        # Check 7: Interval width reasonableness
+        # 检查 7：区间宽度合理性
         check_7 = self._check_interval_width(p10, p50, p90)
         results["layer1_checks"].append(check_7)
 
-        # Aggregate Layer 1
+        # 汇总第 1 层结果
         layer1_failed = [c for c in results["layer1_checks"] if not c["passed"]]
         results["layer1_passed"] = len(layer1_failed) == 0
         
@@ -106,14 +106,14 @@ class QAEngine:
             return False, summary, results
 
         # ====== LAYER 2: LLM Soft Validation (deferred to llm_service) ======
-        # Layer 2 is triggered by the backend service when calling the configured LLM
+        # 第 2 层由后端服务在调用已配置 LLM 时触发
         results["layer2_notes"] = "Pending LLM validation"
         results["overall_passed"] = True
         
         summary = f"All checks passed ({len(results['layer1_checks'])} rule checks)"
         logger.info(f"QA {model_name}: {summary}")
         
-        # Log validation
+        # 记录校验日志
         self.validation_log.append({
             "timestamp": str(date.today()),
             "model": model_name,
@@ -208,7 +208,7 @@ class QAEngine:
         widths = (p90 - p10) / p50 * 100
         mean_width = np.mean(widths)
         
-        # Reasonable range: 0.5% to 20% of price
+        # 合理范围：价格的 0.5% 到 20%
         passed = 0.5 <= mean_width <= 20.0
         return {
             "check": "interval_width",

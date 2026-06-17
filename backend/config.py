@@ -7,15 +7,15 @@ from pathlib import Path
 class Settings(BaseSettings):
     """Global application settings loaded from .env file."""
 
-    # Application
+    # 应用配置
     app_name: str = "CommodityPricePrediction"
     app_env: str = "development"
     debug: bool = True
 
-    # Database
+    # 数据库
     database_url: str = "sqlite+aiosqlite:///./data/commodity_prediction.db"
 
-    # JWT
+    # JWT 和会话
     jwt_secret_key: str = "poc-secret-key-change-in-production-2026"
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 1440
@@ -24,19 +24,19 @@ class Settings(BaseSettings):
     session_cookie_name: str = "commodity_session"
     cookie_secure: bool = False
 
-    # POC demo users. Override these in .env for non-local use.
+    # POC 演示用户。非本地使用时请在 .env 中覆盖。
     admin_default_password: str = "Admin123456@"
     executive_default_password: str = "Exec123456@"
     procurement_default_password: str = "Proc123456@"
 
-    # Generic OpenAI-compatible LLM endpoint. DeepSeek is the default example,
-    # but any compatible provider can be configured through these fields.
+    # 通用 OpenAI-compatible LLM 端点。DeepSeek 是默认示例，
+    # 也可以通过这些字段配置其他兼容供应商。
     openai_compatible_api_key: str = ""
     openai_compatible_base_url: str = ""
     openai_compatible_model: str = ""
     openai_compatible_provider: str = ""
 
-    # Backward-compatible aliases. Prefer OPENAI_COMPATIBLE_* or LLM_* in new env files.
+    # 向后兼容的旧变量。新环境文件优先使用 OPENAI_COMPATIBLE_* 或 LLM_*。
     llm_api_key: str = ""
     llm_base_url: str = "https://api.deepseek.com/v1"
     llm_model: str = "deepseek-v4-pro"
@@ -53,20 +53,19 @@ class Settings(BaseSettings):
     fred_api_key: str = ""
     fred_base_url: str = "https://api.stlouisfed.org/fred"
 
-    # Model
+    # 模型
     model_dir: str = "backend/ml/trained_models"
     prediction_horizon: int = 30
     lookback_window: int = 30
     data_refresh_seconds: int = 300
     market_data_start_date: str = "2006-06-01"
 
-    # Temporary / scratch directories
+    # 临时目录
     temp_dir: str = "data/temp"
     trained_models_dir: str = "backend/ml/trained_models"
 
-    # Server
+    # 服务端口。当前前端由 FastAPI 同端口托管，不再单独配置 3000 端口。
     backend_port: int = 8000
-    frontend_port: int = 3000
 
     @property
     def resolved_llm_api_key(self) -> str:

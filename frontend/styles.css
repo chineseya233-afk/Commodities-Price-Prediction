@@ -1,12 +1,12 @@
 /* ============================================
-   COMMODITY FORECAST — DESIGN SYSTEM
-   Inspired by The Verge (DESIGN.md)
-   Canvas Black + Jelly Mint + Ultraviolet
+   大宗商品预测看板设计系统
+   视觉参考：The Verge（见 DESIGN.md）
+   画布黑 + 果冻薄荷绿 + 紫外线紫
    ============================================ */
 
-/* === CSS Custom Properties (Design Tokens) === */
+/* === CSS 自定义属性（设计令牌） === */
 :root {
-    /* Brand Hazards */
+    /* 品牌强调色 */
     --jelly-mint: #3cffd0;
     --ultraviolet: #5200ff;
     --console-mint-border: #309875;
@@ -14,29 +14,29 @@
     --focus-cyan: #1eaedb;
     --purple-rule: #3d00bf;
 
-    /* Surfaces */
+    /* 界面层级 */
     --canvas-black: #131313;
     --surface-slate: #2d2d2d;
     --image-frame: #313131;
 
-    /* Text */
+    /* 文本 */
     --text-primary: #ffffff;
     --text-secondary: #949494;
     --text-muted: #e9e9e9;
     --text-inverted: #131313;
 
-    /* Semantic */
+    /* 语义色 */
     --alert-high: #ff4757;
     --alert-medium: #ffa502;
     --alert-low: #3cffd0;
     --success: #3cffd0;
 
-    /* Fonts */
+    /* 字体 */
     --font-display: 'Bebas Neue', Impact, sans-serif;
     --font-body: 'Space Grotesk', sans-serif;
     --font-mono: 'Space Mono', 'Courier New', monospace;
 
-    /* Spacing */
+    /* 间距 */
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
@@ -45,7 +45,7 @@
     --space-2xl: 48px;
     --space-3xl: 64px;
 
-    /* Radii */
+    /* 圆角 */
     --radius-tight: 2px;
     --radius-sm: 4px;
     --radius-md: 12px;
@@ -54,7 +54,7 @@
     --radius-pill: 40px;
 }
 
-/* === Reset & Base === */
+/* === 重置和基础样式 === */
 *,
 *::before,
 *::after {
@@ -78,10 +78,10 @@ body {
     overflow-x: hidden;
 }
 
-/* === Utilities === */
+/* === 工具类 === */
 .hidden { display: none !important; }
 
-/* === Animations === */
+/* === 动画 === */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
@@ -108,7 +108,7 @@ body {
 }
 
 /* ============================================
-   LOGIN SCREEN
+   登录页面
    ============================================ */
 .login-screen {
     display: flex;
@@ -297,7 +297,7 @@ body {
 
 
 /* ============================================
-   TOP NAVIGATION
+   顶部导航
    ============================================ */
 .top-nav {
     display: flex;
@@ -397,7 +397,7 @@ body {
 
 
 /* ============================================
-   VIEW CONTAINERS
+   视图容器
    ============================================ */
 .view-container {
     padding: var(--space-lg);
@@ -408,7 +408,7 @@ body {
 
 
 /* ============================================
-   KPI ROW
+   KPI 行
    ============================================ */
 .kpi-row {
     display: grid;
@@ -462,7 +462,7 @@ body {
 
 
 /* ============================================
-   CARDS
+   卡片
    ============================================ */
 .dashboard-grid {
     display: grid;
@@ -535,7 +535,7 @@ body {
 
 
 /* ============================================
-   BUTTONS (PILL VARIANTS)
+   按钮（胶囊样式）
    ============================================ */
 .btn-pill {
     background: var(--surface-slate);
@@ -564,7 +564,7 @@ body {
 
 
 /* ============================================
-   CHART CONTAINERS
+   图表容器
    ============================================ */
 .chart-container {
     width: 100%;
@@ -573,7 +573,7 @@ body {
 
 
 /* ============================================
-   RISK ALERTS
+   风险提示
    ============================================ */
 .risk-alerts-container {
     display: flex;
@@ -637,7 +637,7 @@ body {
 
 
 /* ============================================
-   ANALYSIS PANEL (MINT ACCENT CARD)
+   分析面板（薄荷绿强调卡片）
    ============================================ */
 .analysis-content {
     color: #0a2e24;
@@ -690,7 +690,7 @@ body {
 
 
 /* ============================================
-   QA STATUS
+   QA 状态
    ============================================ */
 .qa-status-container {
     display: flex;
@@ -738,7 +738,7 @@ body {
 
 
 /* ============================================
-   PROCUREMENT VIEW
+   采购视图
    ============================================ */
 .procurement-grid {
     display: grid;
@@ -750,7 +750,7 @@ body {
     grid-column: 1 / -1;
 }
 
-/* Strategy content on purple card */
+/* 紫色卡片中的策略内容 */
 .strategy-content {
     color: var(--text-primary);
 }
@@ -811,7 +811,7 @@ body {
 
 
 /* ============================================
-   TABLES
+   表格
    ============================================ */
 .table-container {
     overflow-x: auto;
@@ -853,7 +853,7 @@ body {
 
 
 /* ============================================
-   DATA QUALITY PANEL
+   数据质量面板
    ============================================ */
 .data-quality-content {
     display: flex;
@@ -902,7 +902,7 @@ body {
 
 
 /* ============================================
-   STATUS BAR
+   状态栏
    ============================================ */
 .status-bar {
     display: flex;
@@ -958,7 +958,7 @@ body {
 
 
 /* ============================================
-   LOADING STATE
+   加载状态
    ============================================ */
 .loading-skeleton {
     background: linear-gradient(
@@ -974,7 +974,7 @@ body {
 
 
 /* ============================================
-   RESPONSIVE
+   响应式布局
    ============================================ */
 @media (max-width: 1200px) {
     .kpi-row { grid-template-columns: repeat(2, 1fr); }
@@ -993,7 +993,7 @@ body {
 }
 
 /* ============================================
-   MARKET BRIEF BAR (V2)
+   市场简报栏（V2）
    ============================================ */
 .market-brief {
     display: flex;
@@ -1028,7 +1028,7 @@ body {
 }
 
 /* ============================================
-   TIER LEGEND (below price chart)
+   分层图例（价格图下方）
    ============================================ */
 .tier-legend {
     display: flex;
@@ -1048,7 +1048,7 @@ body {
 .tier-standard { color: rgba(60, 255, 208, 0.6); }
 .tier-fuzzy { color: rgba(60, 255, 208, 0.3); }
 
-/* Ensemble info bar */
+/* 综合模型信息栏 */
 .ensemble-info {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -1061,7 +1061,7 @@ body {
 }
 
 /* ============================================
-   3D RISK REPORT PANEL (V2)
+   三维风险报告面板（V2）
    ============================================ */
 .risk-report-content {
     display: flex;
@@ -1131,7 +1131,7 @@ body {
 }
 
 /* ============================================
-   TIER SWITCHER
+   分层切换器
    ============================================ */
 .tier-switcher {
     display: flex;
@@ -1157,7 +1157,7 @@ body {
 .tier-btn.active { background: var(--jelly-mint); color: #000; border-color: var(--jelly-mint); }
 
 /* ============================================
-   FLOATING CHAT
+   浮动聊天
    ============================================ */
 .chat-fab {
     position: fixed;
@@ -1279,7 +1279,7 @@ body {
 }
 
 /* ============================================
-   COST ANALYSIS
+   成本分析
    ============================================ */
 .cost-scenario {
     display: flex;
@@ -1311,12 +1311,12 @@ body {
     color: var(--text-secondary);
 }
 
-/* Add bottom padding for status bar */
+/* 为状态栏增加底部留白 */
 .view-container {
     padding-bottom: 60px;
 }
 
-/* Toast notifications */
+/* 弹出通知 */
 .toast {
     position: fixed;
     bottom: 60px;
@@ -1340,7 +1340,7 @@ body {
     color: #000;
 }
 
-/* Muted text in tables */
+/* 表格中的弱化文本 */
 .data-table .muted {
     color: var(--text-secondary);
 }

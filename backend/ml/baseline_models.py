@@ -31,7 +31,7 @@ class NaiveForecaster:
         last_price = df[target_col].iloc[-1]
         prices = [last_price] * self.prediction_horizon
         
-        # Simple confidence based on recent volatility
+        # 基于近期波动率的简单置信度
         recent_std = df[target_col].tail(30).std()
         
         return {
@@ -80,7 +80,7 @@ class ProphetForecaster:
             p10 = future_forecast["yhat_lower"].values
             p90 = future_forecast["yhat_upper"].values
 
-            # Clamp predictions to stay within QA bounds
+            # 将预测限制在 QA 允许范围内
             last_price = float(df[target_col].iloc[-1])
             prices = df[target_col].values
             hist_mean = float(np.mean(prices))
@@ -91,14 +91,14 @@ class ProphetForecaster:
             max_daily_pct = 0.04
             prev = last_price
             for i in range(len(p50)):
-                # Clamp daily change
+                # 限制单日变化
                 max_change = prev * max_daily_pct
                 p50[i] = np.clip(p50[i], prev - max_change, prev + max_change)
-                # Clamp within sigma bounds
+                # 限制在 sigma 范围内
                 p50[i] = np.clip(p50[i], sigma_lo, sigma_hi)
                 prev = p50[i]
 
-            # Ensure tiered confidence intervals
+            # 确保分层置信区间
             for i in range(len(p50)):
                 if i < 7:
                     spread = p50[i] * 0.015
@@ -132,7 +132,7 @@ class ProphetForecaster:
         hist_mean = float(np.mean(prices))
         hist_std = float(np.std(prices))
 
-        # Extract patterns from data
+        # 从数据中提取模式
         recent = prices[-30:] if len(prices) >= 30 else prices
         returns = np.diff(recent) / recent[:-1] if len(recent) > 1 else np.array([0])
         daily_vol = float(np.std(returns)) if len(returns) > 1 else 0.005
@@ -221,12 +221,12 @@ class XGBoostForecaster:
                 logger.warning("XGBoost has too few supervised samples. Using fallback trend forecast.")
                 return self._fallback(df, target_col)
             
-            # Train/test split (last 30 days for validation)
+            # 训练/测试切分（最近 30 天用于验证）
             split_idx = max(1, min(len(X) - 1, max(len(X) - 30, int(len(X) * 0.8))))
             X_train, X_val = X[:split_idx], X[split_idx:]
             y_train, y_val = y[:split_idx], y[split_idx:]
             
-            # Train
+            # 训练
             self.model = XGBRegressor(
                 n_estimators=200,
                 max_depth=6,
@@ -247,7 +247,7 @@ class XGBoostForecaster:
             else:
                 self.model.fit(X_train, y_train, verbose=False)
             
-            # Recursive multi-step prediction
+            # 递归多步预测
             predictions = []
             forecast_df = df.copy()
             forecast_df["date"] = pd.to_datetime(forecast_df["date"])
@@ -260,19 +260,19 @@ class XGBoostForecaster:
 
                 forecast_df = self._append_forecast_row(forecast_df, pred, target_col)
             
-            # Estimate prediction uncertainty from validation residuals
+            # 根据验证残差估计预测不确定性
             if len(X_val) > 0:
                 val_preds = self.model.predict(X_val)
                 residual_std = float(np.std(y_val - val_preds))
             else:
                 residual_std = float(np.std(np.diff(df[target_col].tail(30).values)))
 
-            # Build tiered confidence intervals that pass QA (0.5-20% width)
+            # 构建可通过 QA 的分层置信区间（宽度 0.5%-20%）
             p10_list, p90_list = [], []
             for i, p in enumerate(predictions):
-                # Base spread from residuals
+                # 基于残差的基础扩散宽度
                 base_spread = 1.28 * residual_std
-                # Tiered minimum spread to ensure interval_width >= 0.5%
+                # 分层最小扩散宽度，确保 interval_width >= 0.5%
                 if i < 7:
                     min_spread = p * (0.008 + i * 0.002)
                 elif i < 14:
@@ -415,7 +415,7 @@ class ModelEvaluator:
         
         directional_accuracy = ModelEvaluator.directional_accuracy(actual, predicted)
         
-        # Max Error
+        # 最大误差
         max_error = np.max(np.abs(actual - predicted))
         
         return {

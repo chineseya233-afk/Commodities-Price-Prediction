@@ -34,12 +34,12 @@ class ChinaDieselSimulator(DataProvider):
     - Regional spread: Fujian province premium/discount
     """
 
-    # Fixed tax parameters (2024-2026)
+    # 固定税费参数（2024-2026）
     CONSUMPTION_TAX_PER_TON = 1411.0  # RMB/ton for diesel
     VAT_RATE = 0.13
     BARREL_TO_TON = 7.35  # approximate barrels per metric ton for diesel
     
-    # Seasonal demand multipliers (monthly, 1-12)
+    # 季节性需求系数（按月份 1-12）
     SEASONAL_FACTORS = {
         1: 1.03, 2: 1.01, 3: 0.98, 4: 0.97, 5: 0.98, 6: 1.01,
         7: 1.02, 8: 1.01, 9: 1.00, 10: 1.01, 11: 1.03, 12: 1.04
@@ -80,18 +80,18 @@ class ChinaDieselSimulator(DataProvider):
         dates = pd.bdate_range(start=start_date, end=end_date)
         n = len(dates)
         
-        # Simulate Brent crude oil price (USD/barrel)
+        # 模拟 Brent 原油价格（美元/桶）
         brent_base = 78.0
         brent_returns = self.rng.normal(0, 0.015, n)
         brent_prices = brent_base * np.exp(np.cumsum(brent_returns))
         
-        # Simulate USD/CNY exchange rate
+        # 模拟美元兑人民币汇率
         fx_base = 7.25
         fx_noise = self.rng.normal(0, 0.001, n)
         fx_rates = fx_base + np.cumsum(fx_noise)
         fx_rates = np.clip(fx_rates, 7.0, 7.6)
         
-        # Simulate refinery utilization rate
+        # 模拟炼厂开工率
         util_base = 0.78
         util_noise = self.rng.normal(0, 0.005, n)
         util_rates = util_base + np.cumsum(util_noise) * 0.1
@@ -130,7 +130,7 @@ class ChinaDieselSimulator(DataProvider):
             return pd.DataFrame(columns=["date", "price", "open", "high", "low", 
                                           "volume", "commodity", "source"])
 
-        # Step 1: Generate Brent crude path (mean-reverting GBM)
+        # 第 1 步：生成 Brent 原油价格路径（均值回归 GBM）
         brent_mean = 78.0  # long-term mean
         brent_vol = 0.018  # daily volatility
         mean_reversion_speed = 0.02
@@ -143,19 +143,19 @@ class ChinaDieselSimulator(DataProvider):
             brent[i] = brent[i-1] + drift + shock
             brent[i] = max(brent[i], 50.0)  # floor
 
-        # Step 2: Convert to RMB/ton base price
+        # 第 2 步：换算为人民币/吨基准价
         fx_rate = 7.25 + np.cumsum(self.rng.normal(0, 0.002, n)) * 0.1
         fx_rate = np.clip(fx_rate, 7.0, 7.5)
         
-        # Brent ($/barrel) -> RMB/ton
+        # Brent（美元/桶）-> 人民币/吨
         base_price_rmb = brent * self.BARREL_TO_TON * fx_rate
         
-        # Add taxes
+        # 加上税费
         with_consumption_tax = base_price_rmb + self.CONSUMPTION_TAX_PER_TON
         with_vat = with_consumption_tax * (1 + self.VAT_RATE)
 
-        # Step 3: Apply NDRC step adjustment mechanism
-        # Price only changes every ~10 working days through NDRC adjustments
+        # 第 3 步：应用发改委阶梯调价机制
+        # 价格约每 10 个工作日通过发改委调价机制变化一次
         ndrc_price = np.zeros(n)
         ndrc_price[0] = with_vat[0]
         adjustment_interval = 10
@@ -163,10 +163,10 @@ class ChinaDieselSimulator(DataProvider):
         
         for i in range(1, n):
             if (i - last_adjustment_idx) >= adjustment_interval:
-                # NDRC adjustment window: compare current market price to current NDRC price
+                # 发改委调价窗口：比较当前市场价和当前发改委价
                 market_change_pct = (with_vat[i] - ndrc_price[i-1]) / ndrc_price[i-1]
                 
-                # NDRC usually adjusts by 50-200 RMB/ton per step
+                # 发改委通常每次调整 50-200 元/吨
                 if abs(market_change_pct) > 0.005:  # >0.5% threshold triggers adjustment
                     adjustment = np.clip(
                         with_vat[i] - ndrc_price[i-1],
@@ -179,17 +179,17 @@ class ChinaDieselSimulator(DataProvider):
             else:
                 ndrc_price[i] = ndrc_price[i-1]
 
-        # Step 4: Apply seasonal factors
+        # 第 4 步：应用季节性因子
         seasonal_mult = np.array([
             self.SEASONAL_FACTORS[d.month] for d in dates
         ])
         seasonal_price = ndrc_price * seasonal_mult
 
-        # Step 5: Add Fujian regional noise
+        # 第 5 步：加入福建区域噪声
         regional_noise = self.rng.normal(0, 15, n)  # ±15 RMB/ton regional spread
         final_price = seasonal_price + regional_noise
 
-        # Generate OHLV data (intra-day simulation)
+        # 生成 OHLV 数据（日内模拟）
         daily_range = np.abs(self.rng.normal(0, 25, n))  # typical daily range ~25 RMB
         high = final_price + daily_range * 0.6
         low = final_price - daily_range * 0.4

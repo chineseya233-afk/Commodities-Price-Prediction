@@ -25,8 +25,8 @@ from passlib.context import CryptContext
 from pydantic import BaseModel
 from loguru import logger
 
-# passlib<1.7.5 reads bcrypt.__about__.__version__, which bcrypt 4.x removed.
-# Provide the attribute to avoid a noisy trapped traceback during startup.
+# passlib<1.7.5 会读取 bcrypt.__about__.__version__，但 bcrypt 4.x 已移除该属性。
+# 补上该属性，避免启动时出现可忽略但干扰排查的 traceback。
 try:
     import bcrypt as _bcrypt
 
@@ -38,7 +38,7 @@ try:
 except Exception:
     pass
 
-# Add parent dir to path for imports
+# 将父目录加入导入路径
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from backend.config import settings
@@ -99,7 +99,7 @@ llm_service = LLMService(
 news_sentiment_service = NewsSentimentService()
 model_evaluator = ModelEvaluator()
 
-# Cache for generated data and predictions
+# 生成数据和预测结果缓存
 _cache: Dict = {
     "price_data": None,
     "featured_data": None,
@@ -123,7 +123,7 @@ _cache: Dict = {
 _refresh_lock = asyncio.Lock()
 _report_refresh_task: asyncio.Task | None = None
 
-# Auth
+# 认证
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer(auto_error=False)
 
@@ -158,15 +158,15 @@ async def lifespan(app: FastAPI):
     """Application startup and shutdown."""
     logger.info("Starting Commodity Price Prediction API...")
 
-    # Create data directory
+    # 创建数据目录
     os.makedirs("data", exist_ok=True)
 
-    # Initialize database
+    # 初始化数据库
     engine = get_engine("sqlite:///./data/commodity_prediction.db")
     create_tables(engine)
 
-    # Seed default users and rotate the old weak POC passwords if this database
-    # was created before cookie-based auth.
+    # 写入默认用户；如果数据库创建于 cookie 认证之前，
+    # 则轮换旧的弱 POC 密码。
     session = get_session(engine)
     if session.query(User).count() == 0:
         users = [
@@ -198,7 +198,7 @@ async def lifespan(app: FastAPI):
             logger.warning(f"Rotated weak POC default passwords for: {', '.join(rotated)}")
     session.close()
 
-    # Pre-generate simulation data
+    # 预生成模拟数据
     await _initialize_data()
     refresh_task = asyncio.create_task(_market_refresh_loop())
 
@@ -328,7 +328,7 @@ async def _load_market_dataset() -> tuple[pd.DataFrame, pd.DataFrame, dict, str]
         start_date = _training_start_date(end_date)
     data_source = "simulator"
 
-    # Try EIA real data first
+    # 优先尝试 EIA 真实数据
     price_df = pd.DataFrame()
     try:
         price_df = await eia_provider.fetch_price_data("diesel_0", start_date, end_date)
@@ -338,13 +338,13 @@ async def _load_market_dataset() -> tuple[pd.DataFrame, pd.DataFrame, dict, str]
     except Exception as e:
         logger.warning(f"EIA unavailable: {e}")
 
-    # Fall back to simulator
+    # 回退到模拟器
     if price_df.empty or len(price_df) < 30:
         price_df = await simulator.fetch_price_data("diesel_0", start_date, end_date)
         data_source = "simulator"
         logger.info(f"Using simulator data: {len(price_df)} records")
 
-    # Try merging FRED macro indicators as extra features
+    # 尝试合并 FRED 宏观指标作为额外特征
     try:
         macro_df = await fred_provider.fetch_macro_indicators(start_date, end_date)
         if not macro_df.empty:
@@ -366,11 +366,11 @@ async def _load_market_dataset() -> tuple[pd.DataFrame, pd.DataFrame, dict, str]
     except Exception as e:
         logger.warning(f"FRED unavailable: {e}")
 
-    # Preprocess
+    # 数据预处理
     price_df = preprocessor.process(price_df, target_col="price")
     data_quality = preprocessor.get_quality_report()
 
-    # Feature engineering
+    # 特征工程
     featured_df = feature_engineer.create_features(price_df, target_col="price")
     return price_df, featured_df, data_quality, data_source
 
@@ -817,7 +817,7 @@ async def _generate_all_predictions():
 
     # === QA Validation ===
     for model_name, pred in _cache["predictions"].items():
-        # Sanitize any NaN/Inf in predictions before QA
+        # QA 前清理预测中的 NaN/Inf
         for key in ("p50", "p10", "p90", "mean"):
             if key in pred:
                 sanitized = []
@@ -828,7 +828,7 @@ async def _generate_all_predictions():
                     sanitized.append(round(v, 2))
                 pred[key] = sanitized
 
-        # Layer 1: Hard rules
+        # 第 1 层：硬规则
         is_valid, summary, details = qa_engine.validate_predictions(
             pred, historical, model_name
         )
@@ -844,11 +844,11 @@ async def _generate_all_predictions():
             is_valid = bool(pred.get("qa_passed", False))
         pred["excluded_from_ensemble"] = not is_valid
 
-        # Layer 2 LLM validation is advisory and can be slow. Keep startup
-        # deterministic; background LLM reports provide the softer analysis.
+        # 第 2 层 LLM 校验只作为建议且可能较慢。启动阶段保持
+        # 确定性；更柔性的 LLM 分析交给后台报告刷新。
         pred["qa_l2_status"] = "deferred"
 
-    # Model disagreement detection
+    # 模型分歧检测
     p50_directions = {}
     for model_name, pred in _cache["predictions"].items():
         p50 = pred.get("p50", [])
@@ -857,7 +857,7 @@ async def _generate_all_predictions():
     _cache["model_disagreement"] = len(set(p50_directions.values())) > 1
 
     # === REAL MINI-BACKTEST for metrics ===
-    # Pretend today is 7 business days ago: train only on data before holdout.
+    # 将“今天”视为 7 个工作日前：只用 holdout 之前的数据训练。
     model_weights = {"tft": 0.40, "prophet": 0.30, "xgboost": 0.20, "naive": 0.10}
     test_len = min(7, max(len(historical) - 31, 0))
     if test_len <= 0:
@@ -897,8 +897,8 @@ async def _generate_all_predictions():
             logger.warning(f"XGBoost backtest failed: {e}")
 
         try:
-            # Do not evaluate the already trained full-data TFT on holdout data.
-            # For POC speed, use the TFT wrapper's statistical fallback on train-only data.
+            # 不用已基于全量数据训练的 TFT 评估 holdout 数据。
+            # 为了 POC 速度，在仅训练数据上使用 TFT 包装器的统计 fallback。
             bt_tft = TFTModel(prediction_horizon=test_len)._fallback_predict(backtest_df)
             bt_tft["model"] = "TFT backtest fallback"
             backtest_outputs["tft"] = bt_tft
@@ -981,7 +981,7 @@ async def _generate_all_predictions():
     _cache["segment_metrics"] = segment_metrics
 
     # === Metric-specialized ensemble ===
-    # Price, direction and interval coverage come from the best model for each metric and forecast segment.
+    # 价格、方向和区间覆盖率分别来自各指标和预测分段下的最优模型。
     valid_models = {
         n: m for n, m in _cache["metrics"].items()
         if (
@@ -1049,13 +1049,13 @@ async def _generate_all_predictions():
     ens_p10 = calibrated["p10"]
     ens_p90 = calibrated["p90"]
 
-    # Get best directional accuracy value
+    # 获取最佳方向准确率
     best_dir_acc = specialized_ensemble.get(
         "direction_confidence",
         _cache["metrics"].get(best_dir_model, {}).get("directional_accuracy", 50.0),
     )
 
-    # Step 3: News sentiment analysis with deterministic bounded adjustment
+    # 第 3 步：新闻情绪分析，并进行确定性有界调整
     current_price = float(historical[-1])
     try:
         news_sentiment = await news_sentiment_service.get_market_sentiment(
@@ -1070,7 +1070,7 @@ async def _generate_all_predictions():
     _cache["news_sentiment"] = news_sentiment
     _cache["news_refresh_at"] = datetime.now().isoformat()
 
-    # LLM output is advisory only; it must not overwrite p10/p50/p90.
+    # LLM 输出仅作建议，不能覆盖 p10/p50/p90。
     llm_optimization_applied = False
     _cache["llm_adjustment_proposal"] = None
 
@@ -1093,7 +1093,7 @@ async def _generate_all_predictions():
     ens_p10 = [round(v, 2) for v in ens_p10]
     ens_p90 = [round(v, 2) for v in ens_p90]
 
-    # Keep the coverage model's interval shape, only enforce a minimum tier width.
+    # 保留覆盖率模型的区间形状，只强制最小分层宽度。
     for i in range(len(ens_p50)):
         if i < 7:
             min_spread = ens_p50[i] * (0.008 + i * 0.002)
@@ -1129,7 +1129,7 @@ async def _generate_all_predictions():
     ensemble_pred["excluded_from_ensemble"] = False
     _cache["predictions"]["ensemble"] = ensemble_pred
 
-    # Ensemble metrics describe the selected component for each decision dimension.
+    # Ensemble 指标描述每个决策维度选中的组件模型。
     ens_metrics = dict(valid_models.get(best_mape_model, ensemble_backtest_metrics))
     ens_metrics["model"] = "ensemble"
     ens_metrics["directional_accuracy"] = valid_models.get(best_dir_model, {}).get("directional_accuracy", 0.0)
@@ -1139,7 +1139,7 @@ async def _generate_all_predictions():
     ens_metrics["coverage_model"] = best_coverage_model
     _cache["metrics"]["ensemble"] = ens_metrics
 
-    # Determine ensemble direction
+    # 判断综合模型方向
     ens_direction = specialized_ensemble.get("direction", "震荡")
     dir_p50 = _cache["predictions"].get(best_dir_model, {}).get("p50", [])
     if len(dir_p50) >= 7 and historical[-1]:
@@ -1157,8 +1157,8 @@ async def _generate_all_predictions():
     }
     _cache["best_per_segment"] = best_per_segment
 
-    # Keep API startup responsive. Reports get a deterministic default payload
-    # immediately, then the slower LLM versions refresh in the background.
+    # 保持 API 启动响应快速。报告先获得确定性默认载荷，
+    # 较慢的 LLM 版本随后在后台刷新。
     decision_models = {best_mape_model, best_dir_model, best_coverage_model, "ensemble"}
     qa_failures = {
         m: {"passed": p.get("qa_passed"), "summary": p.get("qa_summary")}
@@ -1297,10 +1297,10 @@ def _get_prediction_date_context() -> tuple[date | None, date]:
     if price_df is None or price_df.empty or "date" not in price_df.columns:
         return None, display_start
     latest_data_date = pd.to_datetime(price_df["date"]).dt.date.max()
-    # Forecast arrays are generated from the first calendar day after the
-    # latest real market observation. Official EIA/FRED feeds can lag by a few
-    # days, so anchoring display to today would hide those leading forecast
-    # offsets and make the chart appear disconnected.
+    # 预测数组从最新真实市场观测日后的第一个自然日开始生成。
+    # 官方 EIA/FRED 数据源可能滞后几天，
+    # 如果把展示锚定到今天，会隐藏预测前段偏移，
+    # 并让图表看起来不连续。
     display_start = latest_data_date + timedelta(days=1)
     return latest_data_date, display_start
 
@@ -1933,7 +1933,7 @@ async def get_backtest_results():
             forecast.extend([forecast[-1]] * (length - len(forecast)))
         return forecast[:length]
 
-    # Walk backward through the data, generating up to 10 backtest periods
+    # 沿数据向前回溯，最多生成 10 个回测区间
     max_periods = 10
     for period_idx in range(max_periods):
         test_end = len(prices) - period_idx * step_size
@@ -1951,7 +1951,7 @@ async def get_backtest_results():
         pred_p10 = []
         pred_p90 = []
 
-        # Use XGBoost for backtest (fastest to retrain)
+        # 回测使用 XGBoost（重训最快）
         try:
             train_df = df.iloc[:train_end].copy()
             if len(train_df) >= step_size * 3:
@@ -1961,7 +1961,7 @@ async def get_backtest_results():
                 pred_p10 = _pad_forecast(pred_result.get("p10", predicted), current_period_price, len(actual))
                 pred_p90 = _pad_forecast(pred_result.get("p90", predicted), current_period_price, len(actual))
             else:
-                # Naive fallback: use last known price
+                # Naive 回退：使用最后已知价格
                 last_known = current_period_price if train_end > 0 else float(actual[0])
                 predicted = [round(last_known, 2)] * len(actual)
                 pred_p10 = [round(last_known * 0.99, 2)] * len(actual)
@@ -2051,9 +2051,9 @@ async def get_dashboard_summary(refresh: bool = False):
     change = latest["price"] - prev["price"]
     change_pct = (change / prev["price"]) * 100 if prev["price"] > 0 else 0
 
-    # Price history is anchored to the latest available real market date. Some
-    # official feeds publish with a lag; anchoring to today can otherwise make
-    # history look empty even when the dataset is healthy.
+    # 历史价格锚定到最新可用真实市场日期。部分
+    # 官方数据源发布会滞后；如果锚定到今天，
+    # 即使数据集正常，也可能让历史区间看起来为空。
     history_end_date = pd.to_datetime(price_df["date"]).dt.date.max()
     history_rows = [
         {
@@ -2068,7 +2068,7 @@ async def get_dashboard_summary(refresh: bool = False):
 
     latest_data_date, display_start_date = _get_prediction_date_context()
 
-    # Predictions with tier labels
+    # 带分层标签的预测结果
     all_predictions = {}
     for model_name, pred in _cache["predictions"].items():
         all_predictions[model_name] = {
@@ -2080,7 +2080,7 @@ async def get_dashboard_summary(refresh: bool = False):
             "qa_summary": pred.get("qa_summary", ""),
         }
 
-    # Model metrics
+    # 模型指标
     metrics = [
         {"model_name": name, **{k: round(v, 4) if isinstance(v, float) else v
          for k, v in m.items() if k != "model"},
@@ -2090,7 +2090,7 @@ async def get_dashboard_summary(refresh: bool = False):
         for name, m in _cache.get("metrics", {}).items()
     ]
 
-    # Risk alerts
+    # 风险提示
     risk_alerts = []
     for model_name, pred in _cache["predictions"].items():
         if not pred.get("qa_passed", True):
@@ -2101,7 +2101,7 @@ async def get_dashboard_summary(refresh: bool = False):
                 "message": f"模型 {model_name} 未通过QA校验: {pred.get('qa_summary', '')}",
             })
 
-    # Model disagreement alert
+    # 模型分歧提示
     if _cache.get("model_disagreement"):
         risk_alerts.append({
             "type": "model_disagreement",
@@ -2109,7 +2109,7 @@ async def get_dashboard_summary(refresh: bool = False):
             "message": "市场分歧风险：多个预测模型对价格走势方向不一致，建议增加人工研判权重",
         })
 
-    # Price volatility alert
+    # 价格波动提示
     recent_vol = price_df["price"].tail(10).std()
     long_vol = price_df["price"].tail(90).std()
     if recent_vol > long_vol * 1.5:
@@ -2119,7 +2119,7 @@ async def get_dashboard_summary(refresh: bool = False):
             "message": f"近期价格波动加剧（10日σ={recent_vol:.0f} vs 90日σ={long_vol:.0f}）",
         })
 
-    # KPIs — use ENSEMBLE metrics for executive dashboard
+    # KPI：决策大屏使用 ENSEMBLE 指标
     ens_m = _cache.get("metrics", {}).get("ensemble", {})
     ens_p50 = _cache["predictions"].get("ensemble", {}).get("p50", [float(latest["price"])])
     visible_ensemble_points = all_predictions.get("ensemble", {}).get("predictions", [])
@@ -2214,14 +2214,14 @@ async def chat_with_ai(request: dict):
     if not question:
         raise HTTPException(status_code=400, detail="请输入问题")
 
-    # Build context from cached data
+    # 基于缓存数据构建上下文
     price_df = _cache.get("price_data")
     current = float(price_df.iloc[-1]["price"]) if price_df is not None else 0
     predictions = _cache.get("predictions", {})
     metrics = _cache.get("metrics", {})
     news_sentiment = _cache.get("news_sentiment", {})
 
-    # Get best model predictions
+    # 获取最佳模型预测
     best_name = "tft"
     best_p50 = []
     for name, pred in predictions.items():
@@ -2271,7 +2271,7 @@ async def health_check():
 
 
 # --- Serve Frontend ---
-# Root path serves index.html, static files served from /frontend/
+# 根路径返回 index.html，静态文件从 /frontend/ 提供
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 
 
@@ -2281,5 +2281,5 @@ async def serve_index():
     return FileResponse(FRONTEND_DIR / "index.html")
 
 
-# Mount static files AFTER all API routes so /api/* takes priority
+# 在所有 API 路由之后挂载静态文件，确保 /api/* 优先匹配
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR)), name="frontend")
