@@ -27,9 +27,11 @@ archive/
 archives/
 
 # Secrets and local environment
-.env
+# The tracked .env is a public setup template. Keep real private values in
+# local-only files such as .env.local or .env.private, or mark local .env
+# changes as skip-worktree.
 .env.*
-!.env.example
+!.env
 *.pem
 *.key
 *.crt
